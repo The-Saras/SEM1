@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Issue = {
+/* ================= TYPES ================= */
+
+type Machine = {
   id: string;
-  machineId: string;
-  description: string;
-  status: string;
-  loggedById: string;
+  machineCode: string;
+  name: string;
+  type: string;
+  location: string | null;
+  createdAt: string;
 };
 
 type UserPayload = {
@@ -16,54 +19,64 @@ type UserPayload = {
   email: string;
   role: string;
 };
+
+/* ================= HELPERS ================= */
+
 function decodeToken(token: string) {
   try {
     const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    return decoded;
+    return JSON.parse(atob(payload));
   } catch {
     return null;
   }
 }
 
+/* ================= PAGE ================= */
+
 export default function DashboardPage() {
-  const [user, setUser] = useState<UserPayload | null>(null);
   const router = useRouter();
-  const [issues, setIssues] = useState<Issue[]>([]);
+
+  const [user, setUser] = useState<UserPayload | null>(null);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchIssues = async () => {
+    const fetchMachines = async () => {
       try {
         const token = localStorage.getItem("token");
-        const decodedUser = decodeToken(token || "");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const decodedUser = decodeToken(token);
         setUser(decodedUser);
 
-        const res = await fetch("/api/issues/getall", {
+        const res = await fetch("/api/machine/getall", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (!res.ok) {
-          throw new Error("Failed to fetch issues");
+          throw new Error("Failed to fetch machines");
         }
 
         const data = await res.json();
-        setIssues(data);
-      } catch (err) {
-        console.error(err);
+        setMachines(data);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchIssues();
-  }, []);
+    fetchMachines();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 font-['Segoe UI',sans-serif]">
-      {/* Top Bar */}
+      {/* ================= TOP BAR ================= */}
       <div className="bg-gray-100 border border-gray-400 shadow-sm p-4 mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold text-gray-800 uppercase tracking-wide">
@@ -90,38 +103,36 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Actions */}
+      {/* ================= ACTIONS ================= */}
       <div className="bg-gray-100 border border-gray-400 shadow-sm p-4 mb-6 flex gap-4">
-        <button
-          onClick={() => router.push("/issue")}
-          className="px-4 py-2 bg-blue-700 text-white border border-blue-900 shadow hover:bg-blue-800"
-        >
-          Log New Issue
-        </button>
-        <button
-          onClick={() => router.push("/machine/create")}
-          className="px-4 py-2 bg-green-700 text-white border border-blue-900 shadow hover:bg-green-800"
-        >
-          Create New Machine
-        </button>
+        {user?.role === "SUPERVISOR" && (
+          <button
+            onClick={() => router.push("/machine/create")}
+            className="px-4 py-2 bg-green-700 text-white border border-green-900 shadow hover:bg-green-800"
+          >
+            Create New Machine
+          </button>
+        )}
       </div>
 
-      {/* Issues Table */}
+      {/* ================= MACHINES TABLE ================= */}
       <div className="bg-gray-100 border border-gray-400 shadow-sm">
         <div className="border-b border-gray-400 p-3 font-semibold text-gray-800 uppercase">
-          Recent Issues
+          Machines
         </div>
 
         <table className="w-full text-sm text-gray-800 border-collapse">
           <thead className="bg-gray-300 border-b border-gray-400">
             <tr>
               <th className="p-2 border-r border-gray-400 text-left">
-                Machine
+                Machine Code
               </th>
               <th className="p-2 border-r border-gray-400 text-left">
-                Description
+                Name
               </th>
-              <th className="p-2 border-r border-gray-400 text-left">Status</th>
+              <th className="p-2 border-r border-gray-400 text-left">
+                Type
+              </th>
               <th className="p-2 text-left">Action</th>
             </tr>
           </thead>
@@ -130,59 +141,54 @@ export default function DashboardPage() {
             {loading && (
               <tr>
                 <td colSpan={4} className="p-4 text-center">
-                  Loading issues...
+                  Loading machines...
                 </td>
               </tr>
             )}
 
-            {!loading && issues.length === 0 && (
+            {!loading && machines.length === 0 && (
               <tr>
                 <td colSpan={4} className="p-4 text-center">
-                  No issues found
+                  No machines found
                 </td>
               </tr>
             )}
 
-            {issues.map((issue) => (
-              <IssueRow
-                key={issue.id}
-                machine={issue.machineId}
-                description={issue.description}
-                status={issue.status}
-                onView={() => router.push(`/issue/${issue.id}`)}
-              />
-            ))}
+            {!loading &&
+              machines.map((machine) => (
+                <MachineRow
+                  key={machine.id}
+                  machineCode={machine.machineCode}
+                  name={machine.name}
+                  type={machine.type}
+                  onView={() => router.push(`/machine/${machine.id}`)}
+                />
+              ))}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
-function IssueRow({
-  machine,
-  description,
-  status,
+
+
+
+function MachineRow({
+  machineCode,
+  name,
+  type,
   onView,
 }: {
-  machine: string;
-  description: string;
-  status: string;
+  machineCode: string;
+  name: string;
+  type: string;
   onView: () => void;
 }) {
-  const statusColor =
-    status === "OPEN"
-      ? "text-red-700"
-      : status === "IN_PROGRESS"
-      ? "text-yellow-700"
-      : "text-green-700";
-
   return (
     <tr className="border-b border-gray-300 hover:bg-gray-200">
-      <td className="p-2 border-r border-gray-300">{machine}</td>
-      <td className="p-2 border-r border-gray-300">{description}</td>
-      <td className={`p-2 border-r border-gray-300 font-medium ${statusColor}`}>
-        {status}
-      </td>
+      <td className="p-2 border-r border-gray-300">{machineCode}</td>
+      <td className="p-2 border-r border-gray-300">{name}</td>
+      <td className="p-2 border-r border-gray-300">{type}</td>
       <td className="p-2">
         <button
           onClick={onView}

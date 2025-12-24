@@ -9,7 +9,7 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 export async function POST(request: NextRequest) {
-  const { name, email, password } = await request.json();
+  const { name, email, password, role } = await request.json();
 
   if (!name || !email || !password) {
     return new Response("Missing fields", { status: 400 });
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = await prisma.user.create({
-    data: { name, email, password: hashedPassword },
+    data: { name, email, password: hashedPassword,role },
   });
 
   return Response.json({

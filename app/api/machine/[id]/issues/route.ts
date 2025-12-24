@@ -9,7 +9,7 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
-export async function PATCH(
+export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -23,24 +23,16 @@ export async function PATCH(
   }
 
   try {
-    const { id } = await context.params; // ✅ FIX 1
+    const { id } = await context.params; // ✅ FIX
 
-    const body = await request.json();
-    const { description, status, resolution,correctiveAction } = body;
-
-    const updatedIssue = await prisma.issue.update({
-      where: { id },
-      data: {
-        description,
-        status,
-        resolution,
-        correctiveAction
-      },
+    const issues = await prisma.issue.findMany({
+      where: { machineId: id },
+      orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(updatedIssue, { status: 200 });
+    return NextResponse.json(issues);
   } catch (error) {
-    console.error("Error updating issue:", error);
+    console.error("Error fetching issues:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

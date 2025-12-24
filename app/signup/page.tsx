@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type UserRole = "OPERATOR" | "SUPERVISOR";
+
 export default function SignupPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("OPERATOR");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,7 +27,12 @@ export default function SignupPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+        }),
       });
 
       if (!res.ok) {
@@ -31,7 +40,6 @@ export default function SignupPage() {
         throw new Error(msg || "Signup failed");
       }
 
-      // ✅ Success → go to login
       router.push("/login");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -66,6 +74,7 @@ export default function SignupPage() {
             </div>
           )}
 
+          {/* Name */}
           <div>
             <label className="block mb-1 font-medium">Name</label>
             <input
@@ -77,6 +86,7 @@ export default function SignupPage() {
             />
           </div>
 
+          {/* Email */}
           <div>
             <label className="block mb-1 font-medium">Email</label>
             <input
@@ -88,7 +98,21 @@ export default function SignupPage() {
             />
           </div>
 
-          <div className="col-span-2">
+          {/* Role */}
+          <div>
+            <label className="block mb-1 font-medium">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
+              className="w-full p-2 border border-gray-500 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+            >
+              <option value="OPERATOR">OPERATOR</option>
+              <option value="SUPERVISOR">SUPERVISOR</option>
+            </select>
+          </div>
+
+          {/* Password */}
+          <div>
             <label className="block mb-1 font-medium">Password</label>
             <input
               type="password"
