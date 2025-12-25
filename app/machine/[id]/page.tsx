@@ -55,6 +55,8 @@ export default function MachineDetailsPage() {
     const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    const [files, setFiles] = useState<File[]>([]);
+
 
 
     /* ================= FETCH MACHINE ================= */
@@ -110,6 +112,40 @@ export default function MachineDetailsPage() {
         if (id) { fetchMachine(); fetchIssues(); }
     }, [id, router]);
 
+
+    /*=================UPLOAD IMAGES =================*/
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files) return;
+
+        const selected = Array.from(e.target.files).slice(0, 12);
+        setFiles(selected);
+    };
+
+    const uploadImages = async (issueId: string) => {
+        const token = localStorage.getItem("token");
+
+        const fd = new FormData();
+        fd.append("issueId", issueId);
+
+        files.forEach((file) => {
+            fd.append("images", file);
+        });
+
+        const res = await fetch("/api/issues/upload-images", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: fd,
+        });
+
+        if (!res.ok) {
+            throw new Error("Image upload failed");
+        }
+    };
+
+
     /* ================= CREATE ISSUE ================= */
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -120,6 +156,7 @@ export default function MachineDetailsPage() {
         try {
             const token = localStorage.getItem("token");
 
+            // 1️⃣ Create issue
             const res = await fetch("/api/issues/create", {
                 method: "POST",
                 headers: {
@@ -127,7 +164,7 @@ export default function MachineDetailsPage() {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    machineId: id, // 👈 comes from URL
+                    machineId: id,
                     ...formData,
                 }),
             });
@@ -136,6 +173,12 @@ export default function MachineDetailsPage() {
                 throw new Error("Failed to create issue");
             }
 
+            const createdIssue: Issue = await res.json();
+
+            // 2️⃣ Upload images (optional)
+            await uploadImages(createdIssue.id);
+
+            // 3️⃣ Reset UI
             setSuccessMsg("Issue logged successfully");
             setFormData({
                 description: "",
@@ -144,7 +187,12 @@ export default function MachineDetailsPage() {
                 correctiveAction: "",
                 resolution: "",
             });
+            setFiles([]);
             setShowIssueForm(false);
+
+            // 4️⃣ Refresh issues list
+            setIssues((prev) => [createdIssue, ...prev]);
+
         } catch (err) {
             console.error(err);
             alert("Error creating issue");
@@ -286,6 +334,23 @@ export default function MachineDetailsPage() {
                         }
                         placeholder="Optional"
                     />
+
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
+
+                    <div className="flex gap-2 mt-2">
+                        {files.map((file, i) => (
+                            <img
+                                key={i}
+                                src={URL.createObjectURL(file)}
+                                className="w-24 h-24 object-cover border"
+                            />
+                        ))}
+                    </div>
 
                     <button
                         type="submit"
@@ -450,6 +515,21 @@ function EditIssueModal({
     });
 
     const [saving, setSaving] = useState(false);
+    const [images, setImages] = useState<
+        { id: string; src: string }[]
+    >([]);
+    const [preview, setPreview] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchImages = async () => {
+            const res = await fetch(`/api/issues/${issue.id}/images`);
+            if (!res.ok) return;
+            const data = await res.json();
+            setImages(data);
+        };
+
+        fetchImages();
+    }, [issue.id]);
 
     const handleSave = async () => {
         try {
@@ -561,6 +641,28 @@ function EditIssueModal({
                         />
                     </div>
                 </div>
+                {/* Images */}
+
+                {images.length > 0 && (
+                    <div>
+                        <label className="block text-sm font-medium mb-2">
+                            Attached Images
+                        </label>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {images.map((img) => (
+                                <img
+                                    key={img.id}
+                                    src={img.src}
+                                    alt="Issue"
+                                    onClick={() => setPreview(img.src)}
+                                    className="w-full h-32 object-cover border border-gray-400 cursor-pointer hover:opacity-90"
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
 
                 <div className="flex justify-end gap-3 mt-8">
                     <button
@@ -579,6 +681,18 @@ function EditIssueModal({
                     </button>
                 </div>
             </div>
+            {preview && (
+                <div
+                    className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+                    onClick={() => setPreview(null)}
+                >
+                    <img
+                        src={preview}
+                        className="max-w-[90%] max-h-[90%] border border-white"
+                    />
+                </div>
+            )}
+
         </div>
     );
 }

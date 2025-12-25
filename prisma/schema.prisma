@@ -71,9 +71,11 @@ model IssueImage {
   id        String   @id @default(uuid())
   issueId   String
   issue     Issue    @relation(fields: [issueId], references: [id])
-  imageUrl  String
+  image     Bytes
+  mimeType  String
   createdAt DateTime @default(now())
 }
+
 
 
 datasource db {
