@@ -20,7 +20,7 @@ type Issue = {
     rootCause: string | null;
     correctiveAction: string | null;
     resolution: string | null;
-    status: "OPEN" | "IN_PROGRESS" | "CLOSED";
+    status: "OPEN" | "IN_PROGRESS" | "CLOSED" | "RESOLVED";
     createdAt: string;
 };
 
@@ -59,7 +59,8 @@ export default function MachineDetailsPage() {
 
 
 
-    /* ================= FETCH MACHINE ================= */
+
+
 
     useEffect(() => {
         const fetchIssues = async () => {
@@ -270,6 +271,13 @@ export default function MachineDetailsPage() {
                 </button>
 
                 <button
+                    onClick={() => router.push(`/machine/${id}/analysis`)}
+                    className="px-4 py-2 bg-purple-700 text-white"
+                >
+                    View Analysis
+                </button>
+
+                <button
                     onClick={() => setShowIssueForm((prev) => !prev)}
                     className="px-4 py-2 bg-blue-700 text-white"
                 >
@@ -420,14 +428,18 @@ export default function MachineDetailsPage() {
                                     </td>
                                     <td
                                         className={`p-2 border-r border-gray-300 font-medium ${issue.status === "OPEN"
-                                            ? "text-red-700"
-                                            : issue.status === "IN_PROGRESS"
-                                                ? "text-yellow-700"
-                                                : "text-green-700"
+                                                ? "text-red-700"
+                                                : issue.status === "IN_PROGRESS"
+                                                    ? "text-yellow-700"
+                                                    : issue.status === "CLOSED" || issue.status === "RESOLVED"
+                                                        ? "text-green-700"
+                                                        : "text-gray-500"
                                             }`}
                                     >
-                                        {issue.status}
+                                        {issue.status ?? "UNKNOWN"}
+                                        
                                     </td>
+                                    
                                     <td className="p-2">
                                         {new Date(issue.createdAt).toLocaleDateString()}
                                     </td>
@@ -519,7 +531,25 @@ function EditIssueModal({
         { id: string; src: string }[]
     >([]);
     const [preview, setPreview] = useState<string | null>(null);
+    function getUserFromLocalStorage(): {
+        id: string;
+        email: string;
+        name: string;
+        role: "OPERATOR" | "SUPERVISOR";
+    } | null {
+        if (typeof window === "undefined") return null;
 
+        const user = localStorage.getItem("user");
+        if (!user) return null;
+
+        try {
+            return JSON.parse(user);
+        } catch {
+            return null;
+        }
+    }
+    const user = getUserFromLocalStorage();
+    const isOperator = user?.role === "OPERATOR";
     useEffect(() => {
         const fetchImages = async () => {
             const res = await fetch(`/api/issues/${issue.id}/images`);
@@ -591,18 +621,27 @@ function EditIssueModal({
                         </label>
                         <select
                             value={form.status}
+                            disabled={isOperator}
                             onChange={(e) =>
                                 setForm({
                                     ...form,
                                     status: e.target.value as Issue["status"],
                                 })
                             }
-                            className="w-full border border-gray-400 px-3 py-2"
+                            className={`w-full border border-gray-400 px-3 py-2 ${isOperator ? "bg-gray-200 cursor-not-allowed" : ""
+                                }`}
                         >
                             <option value="OPEN">OPEN</option>
                             <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="RESOLVED">RESOLVED</option>
                             <option value="CLOSED">CLOSED</option>
                         </select>
+
+                        {isOperator && (
+                            <p className="text-xs text-gray-600 mt-1">
+                                Status can only be updated by a supervisor
+                            </p>
+                        )}
                     </div>
 
                     {/* Corrective Action */}
