@@ -23,7 +23,7 @@ export async function PATCH(
   }
 
   try {
-    const { id } = await context.params; // ✅ FIX 1
+    const { id } = await context.params; 
 
     const body = await request.json();
     const { description, status, resolution,correctiveAction } = body;

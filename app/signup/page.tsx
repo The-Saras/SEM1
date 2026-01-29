@@ -5,6 +5,26 @@ import { useRouter } from "next/navigation";
 
 type UserRole = "OPERATOR" | "SUPERVISOR";
 
+/* ------------------ Validation Helpers ------------------ */
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validatePassword(password: string) {
+  if (password.length < 6)
+    return "Password must be at least 6 characters";
+  if (!/[A-Z]/.test(password))
+    return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password))
+    return "Password must contain at least one lowercase letter";
+  if (!/[0-9]/.test(password))
+    return "Password must contain at least one number";
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    return "Password must contain at least one special character";
+  return "";
+}
+
+/* ------------------ Component ------------------ */
+
 export default function SignupPage() {
   const router = useRouter();
 
@@ -16,9 +36,29 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setError("");
+    setEmailError("");
+    setPasswordError("");
+
+    // Email validation
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    // Password validation
+    const pwdError = validatePassword(password);
+    if (pwdError) {
+      setPasswordError(pwdError);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,7 +95,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-10">
       <div className="w-full max-w-2xl bg-gray-100 border border-gray-400 shadow-[0_0_8px_rgba(0,0,0,0.25)] rounded-sm p-6 font-['Segoe UI',sans-serif]">
-        
+
         {/* Header */}
         <div className="border-b border-gray-400 pb-3 mb-6 flex items-center gap-3">
           <div className="w-6 h-6 bg-blue-700"></div>
@@ -93,9 +133,15 @@ export default function SignupPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full p-2 border border-gray-500 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              className={`w-full p-2 border bg-white focus:outline-none focus:ring-1
+                ${emailError
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-500 focus:ring-blue-600"
+                }`}
             />
+            {emailError && (
+              <p className="text-xs text-red-600 mt-1">{emailError}</p>
+            )}
           </div>
 
           {/* Role */}
@@ -118,12 +164,23 @@ export default function SignupPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full p-2 border border-gray-500 bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              className={`w-full p-2 border bg-white focus:outline-none focus:ring-1
+                ${passwordError
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-500 focus:ring-blue-600"
+                }`}
             />
+            {passwordError && (
+              <p className="text-xs text-red-600 mt-1">
+                {passwordError}
+              </p>
+            )}
+            <p className="text-xs text-gray-600 mt-1">
+              Min 6 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
+            </p>
           </div>
 
-          {/* Button Row */}
+          {/* Buttons */}
           <div className="col-span-2 flex justify-end gap-3 mt-4">
             <button
               type="reset"

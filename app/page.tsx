@@ -18,7 +18,7 @@ export default function HomePage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* 🔴 FIX: overlay does NOT block clicks */}
+        
         <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_top,white,transparent_60%)]" />
 
         <div className="relative max-w-6xl mx-auto px-6 py-28 text-center">
